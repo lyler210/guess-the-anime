@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Quiz</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    
+    <div id="start-screen">
+        <h1>Guess the Anime!</h1>
+        <input type="text" id="name-input" placeholder="Enter your name" />
+        <button id="start-button">Start Game</button> 
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <h2 id="player-name"></h2>
+        <img id="anime-image" src="" alt="Guess this Anime!" />
+        <input type="text" id="guess-input" placeholder="Typer your guess..." />
+        <button id="submit-button">Submit Guess</button>
+        <p id="feedback"></p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
