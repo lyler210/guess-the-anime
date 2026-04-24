@@ -1,4 +1,4 @@
-let playerName = " ";
+let playerName = "";
 let currentAnime = null;
 
 const startScreen = document.getElementById("start-screen");
@@ -14,7 +14,7 @@ const feedback = document.getElementById("feedback");
 startButton.addEventListener("click", () => {
     playerName = nameInput.value.trim();
 
-    if(playerName == "") {
+    if(playerName === "") {
         alert("Please enter your name!");
         return;
     }
@@ -30,7 +30,20 @@ startButton.addEventListener("click", () => {
 async function loadAnime() {
 
     const randomPage = Math.floor(Math.random() * 25) + 1;
-    const response = await fetch(`https://api.jikan.moe/v4/top/anime/`)
+    // Fetching 20 anime from a random page from the top anime list
+    const response = await fetch(`https://api.jikan.moe/v4/top/anime?page=${randomPage}&limit=20`);
+    // Parse the raw response into a usable JavaScript object
+    const data = await response.json();
+
+    const animeList = data.data;
+    const randomIndex = Math.floor(Math.random() * animeList.length);
+    currentAnime = animeList[randomIndex];
+
+    animeImage.src = currentAnime.images.jpg.large_image_url;
+    animeImage.alt = "Guess This Anime!";
+
+    guessInput.value = "";
+    feedback.textContent = "";
 }
 
 
