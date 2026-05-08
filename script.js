@@ -19,6 +19,7 @@ startButton.addEventListener("click", () => {
         return;
     }
 
+    // hiding start screen and showing game screen
     startScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
 
@@ -40,7 +41,7 @@ async function loadAnime() {
     currentAnime = animeList[randomIndex];
 
     animeImage.src = currentAnime.images.jpg.large_image_url;
-    animeImage.alt = "Guess This Anime!";
+    animeImage.alt = "What Anime Is This?";
 
     guessInput.value = "";
     feedback.textContent = "";
