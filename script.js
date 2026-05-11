@@ -25,6 +25,7 @@ const playerNameDisplay = document.getElementById("player-name");
 const scoreDisplay = document.getElementById("score-display");
 const livesDisplay = document.getElementById("lives-display");
 const timerDisplay = document.getElementById("timer-display");
+const leaderboardList = document.getElementById("leaderboard-list");
 
 startButton.addEventListener("click", () => {
     playerName = nameInput.value.trim();
@@ -55,9 +56,9 @@ async function fetchAnimeList() {
         }
     }
     
-    for (let i = 1; i <= pages; i++) {
+    for (let i = 0; i < pages; i++) {
         try {
-            const response = await fetch(`https://api.jikan.moe/v4/top/anime?page=${i}&limit=20`);
+            const response = await fetch(`https://api.jikan.moe/v4/top/anime?page=${pageNumbers[i]}&limit=20`);
             const data = await response.json();
             const titles = data.data.map(anime => anime.title);
             animeNameList = [...animeNameList, ...titles];
@@ -162,6 +163,7 @@ function loseLife() {
 }
 
 playAgainButton.addEventListener("click", () => {
+    clearInterval(timerInterval);
     lives = 3;
     score = 0;
     timeLeft = 10;
@@ -181,6 +183,26 @@ function gameOver() {
     clearInterval(timerInterval);
     gameScreen.classList.add("hidden");
     gameOverScreen.classList.remove("hidden");
-    scoreDisplay.textContent = `Final Score: ${score}`;
+    finalScore.textContent = `Final Score: ${score}`;
     finalName.textContent = `Well played, ${playerName}`;
+    saveScore();
+    showLeaderboard();
+}
+
+function saveScore() {
+    const playerScores = JSON.parse(localStorage.getItem("scores")) || [];
+    playerScores.push({ name: playerName, score: score });
+    playerScores.sort((a, b) => b.score - a.score);
+    localStorage.setItem("scores", JSON.stringify(playerScores));
+}
+
+function showLeaderboard() {
+    const playerScores = JSON.parse(localStorage.getItem("scores")) || [];
+    leaderboardList.innerHTML = ""; // clears child elements
+    for(let i = 0; i < 10; i++) {
+        if(!playerScores[i]) break;
+        let playerScore = document.createElement('li');
+        playerScore.textContent = `${playerScores[i].name} - ${playerScores[i].score}`;
+        leaderboardList.appendChild(playerScore);
+    }
 }
