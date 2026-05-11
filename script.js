@@ -1,17 +1,30 @@
 let playerName = "";
 let currentAnime = null;
 let animeNameList = [];
+let animePool = [];
+let score = 0;
+let lives = 3;
+let timeLeft = 10;
+let timerInterval = null;
+let animeSeen = [];
 
 const startScreen = document.getElementById("start-screen");
 const gameScreen = document.getElementById("game-screen");
+const gameOverScreen = document.getElementById("game-over-screen");
+
 const nameInput = document.getElementById("name-input");
 const startButton = document.getElementById("start-button");
-const playerNameDisplay = document.getElementById("player-name");
 const animeImage = document.getElementById("anime-image");
-const guessInput = document.getElementById("guess-input");
-const submitButton = document.getElementById("submit-button");
 const feedback = document.getElementById("feedback");
-const dropdown = document.getElementById("dropdown");
+const choices = document.getElementById("choices");
+const finalScore = document.getElementById("final-score");
+const finalName = document.getElementById("final-name");
+const playAgainButton = document.getElementById("play-again-button");
+
+const playerNameDisplay = document.getElementById("player-name");
+const scoreDisplay = document.getElementById("score-display");
+const livesDisplay = document.getElementById("lives-display");
+const timerDisplay = document.getElementById("timer-display");
 
 startButton.addEventListener("click", () => {
     playerName = nameInput.value.trim();
@@ -28,78 +41,146 @@ startButton.addEventListener("click", () => {
     playerNameDisplay.textContent = `Good luck, ${ playerName }!`;
 
     fetchAnimeList();
-    setTimeout(loadAnime, 1000);
-    loadAnime();
+    setTimeout(loadAnime, 2000);
 });
 
-async function loadAnime() {
+async function fetchAnimeList() {
+    const pages = 3;
 
-    const randomPage = Math.floor(Math.random() * 25) + 1;
-    // Fetching 20 anime from a random page from the top anime list
-    const response = await fetch(`https://api.jikan.moe/v4/top/anime?page=${randomPage}&limit=20`);
-    // Parse the raw response into a usable JavaScript object
-    const data = await response.json();
+    const pageNumbers = [];
+    while(pageNumbers.length < pages) {
+        const randomPage = Math.floor(Math.random() * 15) + 1;
+        if(!pageNumbers.includes(randomPage)) {
+            pageNumbers.push(randomPage);
+        }
+    }
+    
+    for (let i = 1; i <= pages; i++) {
+        try {
+            const response = await fetch(`https://api.jikan.moe/v4/top/anime?page=${i}&limit=20`);
+            const data = await response.json();
+            const titles = data.data.map(anime => anime.title);
+            animeNameList = [...animeNameList, ...titles];
+            animePool = [...animePool, ...data.data];
+        } catch (error) {
+            console.log(`Page ${pageNumbers[i]} failed, skipping...`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
-    const animeList = data.data;
-    const randomIndex = Math.floor(Math.random() * animeList.length);
-    currentAnime = animeList[randomIndex];
+    animePool = animePool.filter(anime => 
+        !animeSeen.some(seen => seen.title === anime.title)
+    );
+
+    console.log("Anime list loaded:", animeNameList.length, "titles");
+}
+
+function loadAnime() {
+    let decoys = [];
+    let decoyIndex;
+    let choiceBoxes = [];
+    let choiceButton;
+
+    if(animePool.length === 0)  {
+        feedback.textContent = "Loading anime...";
+        setTimeout(loadAnime, 500);
+        return;
+    }
+    
+    if(animePool.length < 5) {
+        fetchAnimeList();
+    }
+
+    const randomIndex = Math.floor(Math.random() * animePool.length);
+    currentAnime = animePool[randomIndex];
+    animePool.splice(randomIndex, 1); // removing from animePool
+    animeSeen.push(currentAnime);
 
     // Getting anime image
     animeImage.src = currentAnime.images.jpg.large_image_url;
     animeImage.alt = "What Anime Is This?";
 
+    // Getting decoy anime choices
+    while(decoys.length < 3){ 
+        decoyIndex = Math.floor(Math.random() * animePool.length);
+        if(animePool[decoyIndex].title === currentAnime.title || decoys.includes(animePool[decoyIndex])) {
+            continue;
+        }
+        decoys.push(animePool[decoyIndex]);
+    }
+
+    choiceBoxes = decoys;
+    choiceBoxes.push(currentAnime);
+    choiceBoxes.sort(() => Math.random() - 0.5);
+
+    choices.innerHTML = ""; // clearing choices div
+    // creating buttons
+    for(let i = 0; i < 4; i++) {
+        choiceButton = document.createElement("button");
+        choiceButton.textContent = choiceBoxes[i].title;
+        choiceButton.addEventListener("click", () => {
+            document.querySelectorAll("#choices button").forEach(btn => btn.disabled = true);
+            clearInterval(timerInterval);
+            if(choiceBoxes[i].title === currentAnime.title) {
+                feedback.textContent = "Correct!";
+                score += 100;
+                scoreDisplay.textContent = `Score : ${score}`;
+                setTimeout(loadAnime, 1500);
+            }
+            else {
+                loseLife();
+            }
+            
+        })
+        choices.appendChild(choiceButton);
+    }
+
+    timeLeft = 10;
+    timerDisplay.textContent = `Time Left: ${timeLeft}`;
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `Time Left: ${timeLeft}`;
+        if(timeLeft === 0) {
+            clearInterval(timerInterval);
+            loseLife();
+        }
+    }, 1000);
     // Input area
-    guessInput.value = "";
     feedback.textContent = "";
 }
 
-async function fetchAnimeList() {
-    const pages = 3;
-    // Creating an array of the fetch calls, one for each page
-    const requests = Array.from({ length: pages }, (_, i) =>
-        fetch(`https://api.jikan.moe/v4/top/anime?page=${i + 1}&limit=20`)
-    );
-
-    // Firing all calls
-    const responses = await Promise.all(requests);
-    // Parsing all responses to JS objects
-    const dataArray = await Promise.all(responses.map(r => r.json()));
-    // Flattens the pages from an array of arrays into one array
-    // and extracts only the anime titles to create a array of strings
-    animeNameList = dataArray.flatMap(d => d.data.map(anime => anime.title));
-}
-
-function showDropdown(matches) {
-    dropdown.innerHTML = "";
-
-    matches.slice(0, 10).forEach(title => {
-        const li = document.createElement("li");
-        li.textContent = title;
-        li.addEventListener("click", () => {
-            guessInput.value = title;
-            dropdown.innerHTML = "";
-        });
-        dropdown.appendChild(li);
-    })
-}
-
-guessInput.addEventListener("input", () => {
-    const query = guessInput.value.trim();
-
-    if (query === "") {
-        dropdown.innerHTML = "";
-        return;
+function loseLife() {
+    lives--;
+    feedback.textContent = `Time's up! It was ${currentAnime.title}!`;
+    if(lives === 0) {
+        gameOver();
     }
+    else {
+        livesDisplay.textContent = `Lives: ${"❤️".repeat(lives)}`;
+        setTimeout(loadAnime, 1500);
+    }
+}
 
-    const matches = animeNameList.filter(title =>
-        title.toLowerCase().includes(query.toLowerCase())
-    );
+playAgainButton.addEventListener("click", () => {
+    lives = 3;
+    score = 0;
+    timeLeft = 10;
+    timerInterval = null;
+    animeSeen = [];
+    animePool = [];
+    livesDisplay.textContent = "Lives left: ❤️❤️❤️";
+    scoreDisplay.textContent = "Score: 0";
+    timerDisplay.textContent = "Time Left: 10";
+    gameOverScreen.classList.add("hidden");
+    gameScreen.classList.remove("hidden");
+    fetchAnimeList();
+    setTimeout(loadAnime, 2000);
+});
 
-    showDropdown(matches);
-})
-
-
-
-
-
-
+function gameOver() {
+    clearInterval(timerInterval);
+    gameScreen.classList.add("hidden");
+    gameOverScreen.classList.remove("hidden");
+    scoreDisplay.textContent = `Final Score: ${score}`;
+    finalName.textContent = `Well played, ${playerName}`;
+}

@@ -16,11 +16,19 @@
 
     <div id="game-screen" class="hidden">
         <h2 id="player-name"></h2>
+        <p id="score-display">Score: 0</p>
+        <p id="lives-display">Lives: ❤️❤️❤️</p>
+        <p id="timer-display">Time Left: 10</p>
         <img id="anime-image" src="" alt="Guess this Anime!" />
-        <input type="text" id="guess-input" placeholder="Typer your guess..." />
-        <ul id="dropdown"></ul>
-        <button id="submit-button">Submit Guess</button>
+        <div id="choices"></div>
         <p id="feedback"></p>
+    </div>
+
+    <div id="game-over-screen" class="hidden">
+        <h1>Game Over!</h1>
+        <p id="final-score"></p>
+        <p id="final-name"></p>
+        <button id="play-again-button">Play Again</button>
     </div>
 
     <script src="script.js"></script>
