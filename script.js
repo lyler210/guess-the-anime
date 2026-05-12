@@ -6,11 +6,16 @@ let score = 0;
 let lives = 3;
 let timeLeft = 10;
 let timerInterval = null;
+let loadAnimeTimeout = null;
 let animeSeen = [];
+let gameActive = false;
+let countdown = 3;
+let countdownInterval = null;
 
 const startScreen = document.getElementById("start-screen");
 const gameScreen = document.getElementById("game-screen");
 const gameOverScreen = document.getElementById("game-over-screen");
+const countdownScreen = document.getElementById("countdown-screen");
 
 const nameInput = document.getElementById("name-input");
 const startButton = document.getElementById("start-button");
@@ -26,8 +31,10 @@ const scoreDisplay = document.getElementById("score-display");
 const livesDisplay = document.getElementById("lives-display");
 const timerDisplay = document.getElementById("timer-display");
 const leaderboardList = document.getElementById("leaderboard-list");
+const countdownDisplay = document.getElementById("countdown-display");
 
 startButton.addEventListener("click", () => {
+    gameActive = true;
     playerName = nameInput.value.trim();
 
     if(playerName === "") {
@@ -37,13 +44,34 @@ startButton.addEventListener("click", () => {
 
     // hiding start screen and showing game screen
     startScreen.classList.add("hidden");
-    gameScreen.classList.remove("hidden");
-
-    playerNameDisplay.textContent = `Good luck, ${ playerName }!`;
-
-    fetchAnimeList();
-    setTimeout(loadAnime, 2000);
+    startCountdown();
 });
+
+function startCountdown() {
+    countdownScreen.classList.remove("hidden");
+    gameScreen.classList.add("hidden");
+    countdown = 3;
+    countdownDisplay.textContent = "Ready!";
+    fetchAnimeList();
+    
+    countdownInterval = setInterval(() => {
+        countdown--;
+        if(countdown === 2) {
+            countdownDisplay.textContent = "Set!";
+        } else if(countdown === 1) {
+            countdownDisplay.textContent = "Go!";
+        } else if(countdown === 0) {
+            clearInterval(countdownInterval);
+            setTimeout(() => {
+                gameActive = true;
+                countdownScreen.classList.add("hidden");
+                gameScreen.classList.remove("hidden");
+                playerNameDisplay.textContent = `Good luck, ${playerName}!`;
+                loadAnime();
+            }, 500);
+        }
+    }, 1000);
+}
 
 async function fetchAnimeList() {
     const pages = 3;
@@ -70,6 +98,7 @@ async function fetchAnimeList() {
     }
 
     animePool = animePool.filter(anime => 
+        anime.images?.jpg.large_image_url &&
         !animeSeen.some(seen => seen.title === anime.title)
     );
 
@@ -77,6 +106,8 @@ async function fetchAnimeList() {
 }
 
 function loadAnime() {
+    if(!gameActive) return;
+
     let decoys = [];
     let decoyIndex;
     let choiceBoxes = [];
@@ -84,7 +115,7 @@ function loadAnime() {
 
     if(animePool.length === 0)  {
         feedback.textContent = "Loading anime...";
-        setTimeout(loadAnime, 500);
+        loadAnimeTimeout = setTimeout(loadAnime, 500);
         return;
     }
     
@@ -126,10 +157,10 @@ function loadAnime() {
                 feedback.textContent = "Correct!";
                 score += 100;
                 scoreDisplay.textContent = `Score : ${score}`;
-                setTimeout(loadAnime, 1500);
+                loadAnimeTimeout = setTimeout(loadAnime, 1500);
             }
             else {
-                loseLife();
+                loseLife("wrong");
             }
             
         })
@@ -150,20 +181,29 @@ function loadAnime() {
     feedback.textContent = "";
 }
 
-function loseLife() {
+function loseLife(reason = "times up") {
+    if(!gameActive) return;
     lives--;
-    feedback.textContent = `Time's up! It was ${currentAnime.title}!`;
+    if(reason === "wrong") {
+        feedback.textContent = `Wrong! It was ${currentAnime.title}!`;
+    }
+    else {
+        feedback.textContent = `Time's up! It was ${currentAnime.title}!`;
+    }
+    
     if(lives === 0) {
         gameOver();
     }
     else {
         livesDisplay.textContent = `Lives: ${"❤️".repeat(lives)}`;
-        setTimeout(loadAnime, 1500);
+        loadAnimeTimeout = setTimeout(loadAnime, 1500);
     }
 }
 
 playAgainButton.addEventListener("click", () => {
     clearInterval(timerInterval);
+    clearTimeout(loadAnimeTimeout);
+    gameActive = false;
     lives = 3;
     score = 0;
     timeLeft = 10;
@@ -175,11 +215,11 @@ playAgainButton.addEventListener("click", () => {
     timerDisplay.textContent = "Time Left: 10";
     gameOverScreen.classList.add("hidden");
     gameScreen.classList.remove("hidden");
-    fetchAnimeList();
-    setTimeout(loadAnime, 2000);
+    startCountdown();
 });
 
 function gameOver() {
+    gameActive = false;
     clearInterval(timerInterval);
     gameScreen.classList.add("hidden");
     gameOverScreen.classList.remove("hidden");
